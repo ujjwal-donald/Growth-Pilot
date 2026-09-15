@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { dashboardNav } from "@/config/navigation";
 import { Logo } from "@/components/brand/logo";
@@ -32,7 +31,7 @@ export function AppSidebar({ mobile = false }: { mobile?: boolean }) {
                   item.href === "/app" ? pathname === "/app" : pathname === item.href || pathname.startsWith(`${item.href}/`);
                 const Icon = item.icon;
                 return (
-                  <Link
+                  <a
                     key={item.href}
                     href={item.href}
                     className={cn(
@@ -44,7 +43,7 @@ export function AppSidebar({ mobile = false }: { mobile?: boolean }) {
                   >
                     <Icon className="size-4" />
                     {item.label}
-                  </Link>
+                  </a>
                 );
               })}
             </div>

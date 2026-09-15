@@ -9,6 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { SimpleLineChart } from "@/components/charts/simple-line-chart";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { connectIntegrationAction } from "@/server/actions/integrations";
 
 export default async function WebsiteAnalyticsPage() {
   const ctx = await requireWorkspace();
@@ -41,9 +42,12 @@ export default async function WebsiteAnalyticsPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <a href="/api/social/oauth/google_analytics/start" className={cn(buttonVariants({ size: "sm" }))}>
-              Connect
-            </a>
+            <form action={connectIntegrationAction}>
+              <input type="hidden" name="provider" value="GOOGLE_ANALYTICS" />
+              <button type="submit" className={cn(buttonVariants({ size: "sm" }))}>
+                Connect
+              </button>
+            </form>
           </CardContent>
         </Card>
         <Card size="sm" className="min-w-[220px]">
@@ -56,12 +60,12 @@ export default async function WebsiteAnalyticsPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <a
-              href="/api/social/oauth/google_search_console/start"
-              className={cn(buttonVariants({ size: "sm" }))}
-            >
-              Connect
-            </a>
+            <form action={connectIntegrationAction}>
+              <input type="hidden" name="provider" value="GOOGLE_SEARCH_CONSOLE" />
+              <button type="submit" className={cn(buttonVariants({ size: "sm" }))}>
+                Connect
+              </button>
+            </form>
           </CardContent>
         </Card>
       </div>

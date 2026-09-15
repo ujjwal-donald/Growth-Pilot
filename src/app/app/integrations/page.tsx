@@ -2,7 +2,7 @@ import { requireWorkspace } from "@/server/auth-context";
 import { prisma } from "@/lib/db";
 import { integrationPublicSelect } from "@/lib/social/account-select";
 import { isOAuthConfigured, oauthApps } from "@/lib/social/oauth-apps";
-import { disconnectIntegrationAction } from "@/server/actions/integrations";
+import { disconnectIntegrationAction, connectIntegrationAction } from "@/server/actions/integrations";
 import { PageHeader } from "@/components/layout/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -73,12 +73,12 @@ export default async function IntegrationsPage({
                 </p>
                 {app ? (
                   <div className="flex flex-wrap gap-2">
-                    <a
-                      href={`/api/social/oauth/${provider.toLowerCase()}/start`}
-                      className={cn(buttonVariants())}
-                    >
-                      {item?.status === "CONNECTED" ? "Reconnect" : "Connect"}
-                    </a>
+                    <form action={connectIntegrationAction}>
+                      <input type="hidden" name="provider" value={provider} />
+                      <button type="submit" className={cn(buttonVariants())}>
+                        {item?.status === "CONNECTED" ? "Reconnect" : "Connect"}
+                      </button>
+                    </form>
                     {item?.status === "CONNECTED" ? (
                       <form action={disconnectIntegrationAction}>
                         <input type="hidden" name="provider" value={provider} />

@@ -34,8 +34,76 @@ function errorRedirect(kind: "social" | "analytics", message: string) {
 
 async function requireSessionUser() {
   const session = await auth();
-  if (!session?.user?.id || !session.user.workspaceId) return null;
+  if (!session?.user?.id) return null;
   return session.user;
+}
+
+export async function resolveOAuthStart(input: {
+  workspaceId: string;
+  userId: string;
+  platformParam: string;
+  origin: string;
+}) {
+  const provider = normalizeProvider(input.platformParam);
+  const app = getOAuthApp(provider);
+  if (!app) {
+    return { href: "/app/social/accounts?error=Unknown%20provider" };
+  }
+
+  if (!isOAuthConfigured(provider)) {
+    if (process.env.NODE_ENV === "production") {
+      const path =
+        app.kind === "analytics"
+          ? `/app/integrations?error=${encodeURIComponent(`${app.label} OAuth is not configured.`)}`
+          : `/app/social/accounts?error=${encodeURIComponent(`${app.label} OAuth is not configured.`)}`;
+      return { href: path };
+    }
+    if (app.kind === "analytics") {
+      await upsertDemoIntegration(input.workspaceId, provider as IntegrationProvider);
+      return { href: "/app/integrations" };
+    }
+    await upsertDemoSocial(input.workspaceId, provider as SocialPlatform);
+    return { href: "/app/social/accounts" };
+  }
+
+  const slug = input.platformParam.toLowerCase();
+  const redirectUri = `${input.origin}/api/social/oauth/${slug}/callback`;
+  const codeVerifier = provider === "X" ? crypto.randomBytes(32).toString("hex") : undefined;
+  const state = signOAuthState({
+    workspaceId: input.workspaceId,
+    userId: input.userId,
+    provider,
+    codeVerifier,
+  });
+  return {
+    href: buildAuthorizeUrl({
+      provider,
+      redirectUri,
+      state,
+      codeChallenge: codeVerifier,
+    }),
+  };
+}
+
+export async function startOAuth(request: Request, platformParam: string) {
+  const user = await requireSessionUser();
+  if (!user?.id) {
+    return relativeRedirect(`/login?callbackUrl=/app/social/accounts`);
+  }
+  if (!user.workspaceId) {
+    return relativeRedirect("/onboarding");
+  }
+
+  const { href } = await resolveOAuthStart({
+    workspaceId: user.workspaceId,
+    userId: user.id,
+    platformParam,
+    origin: requestOrigin(request),
+  });
+  if (href.startsWith("http://") || href.startsWith("https://")) {
+    return locationRedirect(href);
+  }
+  return relativeRedirect(href);
 }
 
 async function upsertDemoSocial(workspaceId: string, platform: SocialPlatform) {
@@ -115,44 +183,6 @@ async function fetchProfile(provider: string, accessToken: string) {
   } catch {
     return { id: null, name: provider.replaceAll("_", " ") };
   }
-}
-
-export async function startOAuth(request: Request, platformParam: string) {
-  const user = await requireSessionUser();
-  if (!user?.workspaceId) return relativeRedirect("/login");
-
-  const provider = normalizeProvider(platformParam);
-  const app = getOAuthApp(provider);
-  if (!app) return accountsRedirect("Unknown provider");
-
-  if (!isOAuthConfigured(provider)) {
-    if (process.env.NODE_ENV === "production") {
-      return errorRedirect(app.kind, `${app.label} OAuth is not configured.`);
-    }
-    if (app.kind === "analytics") {
-      await upsertDemoIntegration(user.workspaceId, provider as IntegrationProvider);
-    } else {
-      await upsertDemoSocial(user.workspaceId, provider as SocialPlatform);
-    }
-    return successRedirect(app.kind);
-  }
-
-  const origin = requestOrigin(request);
-  const redirectUri = `${origin}/api/social/oauth/${platformParam.toLowerCase()}/callback`;
-  const codeVerifier = provider === "X" ? crypto.randomBytes(32).toString("hex") : undefined;
-  const state = signOAuthState({
-    workspaceId: user.workspaceId,
-    userId: user.id,
-    provider,
-    codeVerifier,
-  });
-  const url = buildAuthorizeUrl({
-    provider,
-    redirectUri,
-    state,
-    codeChallenge: codeVerifier,
-  });
-  return locationRedirect(url);
 }
 
 export async function handleOAuthCallback(request: Request, platformParam: string) {

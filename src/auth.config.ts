@@ -1,5 +1,16 @@
 import type { NextAuthConfig } from "next-auth";
 
+function hasSessionCookie(request: { cookies: { get(name: string): { value: string } | undefined } }) {
+  const names = [
+    "authjs.session-token",
+    "__Secure-authjs.session-token",
+    "__Host-authjs.session-token",
+    "next-auth.session-token",
+    "__Secure-next-auth.session-token",
+  ];
+  return names.some((name) => Boolean(request.cookies.get(name)?.value));
+}
+
 export const authConfig = {
   trustHost: true,
   pages: {
@@ -11,7 +22,7 @@ export const authConfig = {
   callbacks: {
     authorized({ auth, request }) {
       const { pathname } = request.nextUrl;
-      const isLoggedIn = Boolean(auth?.user);
+      const isLoggedIn = Boolean(auth?.user?.email || auth?.user?.id) || hasSessionCookie(request);
       const isAuthRoute =
         pathname.startsWith("/login") ||
         pathname.startsWith("/signup") ||
@@ -25,6 +36,8 @@ export const authConfig = {
         return new Response(null, { status: 303, headers: { Location: "/app" } });
       }
       if (isAdmin && auth?.user?.platformRole !== "SUPER_ADMIN") {
+        // Cookie may be valid even when Edge JWT decode skipped custom fields — let Node layout enforce admin.
+        if (!auth?.user && hasSessionCookie(request)) return true;
         return new Response(null, { status: 303, headers: { Location: "/app" } });
       }
       if (auth?.user?.status === "SUSPENDED" && isApp) {

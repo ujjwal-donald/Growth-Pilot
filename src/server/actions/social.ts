@@ -9,6 +9,9 @@ import { getStorageDriver } from "@/lib/storage";
 import { mediaObjectKey } from "@/lib/storage/safe-key";
 import { ActionError, requireWorkspace } from "@/server/auth-context";
 import { publishSocialPostById } from "@/server/services/social-publish";
+import { resolveOAuthStart } from "@/server/services/oauth-connect";
+import { originFromHeaders } from "@/lib/http/relative-redirect";
+import { headers } from "next/headers";
 
 function revalidateSocial() {
   revalidatePath("/app/social/accounts");
@@ -17,6 +20,20 @@ function revalidateSocial() {
   revalidatePath("/app/social/published");
   revalidatePath("/app/social/analytics");
   revalidatePath("/app");
+}
+
+export async function connectSocialAccountAction(formData: FormData) {
+  const ctx = await requireWorkspace("MARKETER");
+  const platform = String(formData.get("platform") || "");
+  const headerList = await headers();
+  const { href } = await resolveOAuthStart({
+    workspaceId: ctx.workspace.id,
+    userId: ctx.user.id,
+    platformParam: platform,
+    origin: originFromHeaders(headerList),
+  });
+  revalidateSocial();
+  redirect(href);
 }
 
 async function uploadMedia(workspaceId: string, file: File | null) {

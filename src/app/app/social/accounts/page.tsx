@@ -3,7 +3,7 @@ import { prisma } from "@/lib/db";
 import { SOCIAL_PLATFORMS } from "@/lib/constants";
 import { socialAccountPublicSelect } from "@/lib/social/account-select";
 import { isOAuthConfigured } from "@/lib/social/oauth-apps";
-import { disconnectSocialAccountAction } from "@/server/actions/social";
+import { disconnectSocialAccountAction, connectSocialAccountAction } from "@/server/actions/social";
 import { PageHeader } from "@/components/layout/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,6 +13,8 @@ import { cn } from "@/lib/utils";
 const errors: Record<string, string> = {
   Unknown: "Could not connect that provider.",
 };
+
+export const dynamic = "force-dynamic";
 
 export default async function SocialAccountsPage({
   searchParams,
@@ -66,12 +68,12 @@ export default async function SocialAccountsPage({
                   {live ? "Live OAuth is configured." : demoAllowed ? "Demo connect (no live API)." : "OAuth is not configured."}
                 </p>
                 <div className="flex flex-wrap gap-2">
-                  <a
-                    href={`/api/social/oauth/${platform.id.toLowerCase()}/start`}
-                    className={cn(buttonVariants())}
-                  >
-                    {account?.connectionStatus === "CONNECTED" ? "Reconnect" : "Connect"}
-                  </a>
+                  <form action={connectSocialAccountAction}>
+                    <input type="hidden" name="platform" value={platform.id} />
+                    <button type="submit" className={cn(buttonVariants())}>
+                      {account?.connectionStatus === "CONNECTED" ? "Reconnect" : "Connect"}
+                    </button>
+                  </form>
                   {account ? (
                     <form action={disconnectSocialAccountAction}>
                       <input type="hidden" name="accountId" value={account.id} />
