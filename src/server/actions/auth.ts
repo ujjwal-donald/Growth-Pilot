@@ -2,22 +2,49 @@
 
 import bcrypt from "bcryptjs";
 import { z } from "zod";
+import { AuthError } from "next-auth";
+import { redirect } from "next/navigation";
+import { signIn } from "@/auth";
 import { prisma } from "@/lib/db";
 import { createWorkspaceForUser } from "@/server/services/workspace";
-import { signIn } from "@/auth";
-import { AuthError } from "next-auth";
 import crypto from "node:crypto";
+
+function rethrowRedirect(error: unknown) {
+  if (
+    typeof error === "object" &&
+    error !== null &&
+    "digest" in error &&
+    String((error as { digest?: string }).digest).startsWith("NEXT_REDIRECT")
+  ) {
+    throw error;
+  }
+}
+
+export async function loginAction(formData: FormData) {
+  const email = String(formData.get("email") ?? "")
+    .trim()
+    .toLowerCase();
+  const password = String(formData.get("password") ?? "");
+  if (!email || !password) {
+    redirect("/login?error=missing");
+  }
+
+  try {
+    await signIn("credentials", { email, password, redirectTo: "/app" });
+  } catch (error) {
+    rethrowRedirect(error);
+    if (error instanceof AuthError) {
+      redirect("/login?error=invalid");
+    }
+    throw error;
+  }
+}
 
 const signupSchema = z.object({
   name: z.string().min(2, "Enter your full name"),
   email: z.string().email(),
   password: z.string().min(8, "Use at least 8 characters"),
   companyName: z.string().min(2, "Enter your company name"),
-});
-
-const loginSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(1),
 });
 
 export async function signupAction(formData: FormData) {
@@ -29,12 +56,12 @@ export async function signupAction(formData: FormData) {
   });
 
   if (!parsed.success) {
-    return { error: parsed.error.issues[0]?.message ?? "Invalid input" };
+    redirect("/signup?error=invalid");
   }
 
   const email = parsed.data.email.toLowerCase();
   const existing = await prisma.user.findUnique({ where: { email } });
-  if (existing) return { error: "An account with this email already exists." };
+  if (existing) redirect("/signup?error=exists");
 
   const passwordHash = await bcrypt.hash(parsed.data.password, 12);
   const adminEmail = process.env.ADMIN_EMAIL?.toLowerCase();
@@ -58,29 +85,9 @@ export async function signupAction(formData: FormData) {
       redirectTo: "/onboarding",
     });
   } catch (error) {
+    rethrowRedirect(error);
     if (error instanceof AuthError) {
-      return { error: "Account created, but sign-in failed. Please log in." };
-    }
-    throw error;
-  }
-}
-
-export async function loginAction(formData: FormData) {
-  const parsed = loginSchema.safeParse({
-    email: formData.get("email"),
-    password: formData.get("password"),
-  });
-  if (!parsed.success) return { error: "Enter a valid email and password." };
-
-  try {
-    await signIn("credentials", {
-      email: parsed.data.email.toLowerCase(),
-      password: parsed.data.password,
-      redirectTo: "/app",
-    });
-  } catch (error) {
-    if (error instanceof AuthError) {
-      return { error: "Invalid email or password." };
+      redirect("/login?error=created");
     }
     throw error;
   }
@@ -93,7 +100,6 @@ export async function requestPasswordResetAction(formData: FormData) {
   if (!email) return { error: "Enter your email." };
 
   const user = await prisma.user.findUnique({ where: { email } });
-  // Always succeed to avoid account enumeration.
   if (!user) return { ok: true };
 
   const token = crypto.randomBytes(32).toString("hex");

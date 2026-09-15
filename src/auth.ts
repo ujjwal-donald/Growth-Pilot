@@ -1,7 +1,6 @@
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import Google from "next-auth/providers/google";
-import { PrismaAdapter } from "@auth/prisma-adapter";
 import bcrypt from "bcryptjs";
 import { authConfig } from "@/auth.config";
 import { prisma } from "@/lib/db";
@@ -20,7 +19,7 @@ const googleProvider =
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   ...authConfig,
-  adapter: PrismaAdapter(prisma),
+  // Credentials + JWT cannot use a database session adapter — it drops the cookie.
   providers: [
     ...googleProvider,
     Credentials({
@@ -55,8 +54,29 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   callbacks: {
     ...authConfig.callbacks,
     async jwt({ token, user, trigger, session }) {
-      if (user?.id) {
-        token.userId = String(user.id);
+      if (user) {
+        const email = user.email?.toLowerCase();
+        if (email) {
+          const dbUser = await prisma.user.upsert({
+            where: { email },
+            update: {
+              name: user.name ?? undefined,
+              image: user.image ?? undefined,
+            },
+            create: {
+              email,
+              name: user.name,
+              image: user.image,
+            },
+          });
+          token.userId = dbUser.id;
+          await ensureWorkspaceForUser(
+            dbUser.id,
+            dbUser.companyName || dbUser.name || "My workspace",
+          );
+        } else if (user.id) {
+          token.userId = String(user.id);
+        }
       }
 
       if (trigger === "update" && session?.workspaceId) {
@@ -65,30 +85,20 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
       if (token.userId) {
         const userId = String(token.userId);
-        const dbUser = await prisma.user.findUnique({
-          where: { id: userId },
-        });
-        if (dbUser) {
-          await ensureWorkspaceForUser(dbUser.id, dbUser.companyName || dbUser.name || "My workspace");
-        }
+        const dbUser = await prisma.user.findUnique({ where: { id: userId } });
         const memberships = await prisma.workspaceMember.findMany({
           where: { userId },
           orderBy: { createdAt: "asc" },
         });
-        const hydrated = dbUser
-          ? { ...dbUser, memberships }
-          : null;
-        const resolvedUser = hydrated;
-
-        if (resolvedUser) {
-          token.platformRole = resolvedUser.platformRole;
-          token.status = resolvedUser.status;
-          token.onboardingCompleted = resolvedUser.onboardingCompleted;
-          token.workspaceId = token.workspaceId ?? resolvedUser.memberships[0]?.workspaceId;
-          token.workspaceRole = resolvedUser.memberships.find((m) => m.workspaceId === token.workspaceId)?.role;
-          if (!token.workspaceRole && resolvedUser.memberships[0]) {
-            token.workspaceRole = resolvedUser.memberships[0].role;
-            token.workspaceId = resolvedUser.memberships[0].workspaceId;
+        if (dbUser) {
+          token.platformRole = dbUser.platformRole;
+          token.status = dbUser.status;
+          token.onboardingCompleted = dbUser.onboardingCompleted;
+          token.workspaceId = token.workspaceId ?? memberships[0]?.workspaceId;
+          token.workspaceRole = memberships.find((m) => m.workspaceId === token.workspaceId)?.role;
+          if (!token.workspaceRole && memberships[0]) {
+            token.workspaceRole = memberships[0].role;
+            token.workspaceId = memberships[0].workspaceId;
           }
         }
       }

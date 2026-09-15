@@ -1,31 +1,36 @@
-"use client";
-
-import { useState } from "react";
 import Link from "next/link";
-import { signIn } from "next-auth/react";
 import { loginAction, signupAction } from "@/server/actions/auth";
-import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { cn } from "@/lib/utils";
 
-export function LoginForm({ googleEnabled }: { googleEnabled: boolean }) {
-  const [error, setError] = useState<string | null>(null);
-  const [pending, setPending] = useState(false);
+const loginErrors: Record<string, string> = {
+  invalid: "Invalid email or password.",
+  missing: "Enter your email and password.",
+  created: "Account created. Please log in.",
+  CredentialsSignin: "Invalid email or password.",
+};
+
+const signupErrors: Record<string, string> = {
+  invalid: "Please check your details and try again.",
+  exists: "An account with this email already exists.",
+};
+
+export function LoginForm({
+  googleEnabled,
+  errorCode,
+}: {
+  googleEnabled: boolean;
+  errorCode?: string;
+}) {
+  const error = errorCode ? (loginErrors[errorCode] ?? "Could not sign in.") : null;
 
   return (
     <div>
       <h1 className="font-heading text-2xl font-semibold">Welcome back</h1>
       <p className="mt-1 text-sm text-muted-foreground">Log in to your UPDON workspace.</p>
-      <form
-        className="mt-8 space-y-4"
-        action={async (formData) => {
-          setPending(true);
-          setError(null);
-          const result = await loginAction(formData);
-          if (result?.error) setError(result.error);
-          setPending(false);
-        }}
-      >
+      <form action={loginAction} className="mt-8 space-y-4">
         <div className="space-y-2">
           <Label htmlFor="email">Email</Label>
           <Input id="email" name="email" type="email" required autoComplete="email" />
@@ -40,19 +45,14 @@ export function LoginForm({ googleEnabled }: { googleEnabled: boolean }) {
           <Input id="password" name="password" type="password" required autoComplete="current-password" />
         </div>
         {error ? <p className="text-sm text-destructive">{error}</p> : null}
-        <Button type="submit" className="w-full" disabled={pending}>
-          {pending ? "Signing in…" : "Log in"}
-        </Button>
+        <button type="submit" className={cn(buttonVariants(), "w-full")}>
+          Log in
+        </button>
       </form>
       {googleEnabled ? (
-        <Button
-          type="button"
-          variant="outline"
-          className="mt-4 w-full"
-          onClick={() => signIn("google", { callbackUrl: "/onboarding" })}
-        >
+        <Link href="/api/auth/signin/google" className={cn(buttonVariants({ variant: "outline" }), "mt-4 w-full")}>
           Continue with Google
-        </Button>
+        </Link>
       ) : null}
       <p className="mt-6 text-sm text-muted-foreground">
         New to UPDON?{" "}
@@ -64,24 +64,20 @@ export function LoginForm({ googleEnabled }: { googleEnabled: boolean }) {
   );
 }
 
-export function SignupForm({ googleEnabled }: { googleEnabled: boolean }) {
-  const [error, setError] = useState<string | null>(null);
-  const [pending, setPending] = useState(false);
+export function SignupForm({
+  googleEnabled,
+  errorCode,
+}: {
+  googleEnabled: boolean;
+  errorCode?: string;
+}) {
+  const error = errorCode ? (signupErrors[errorCode] ?? "Could not create the account.") : null;
 
   return (
     <div>
       <h1 className="font-heading text-2xl font-semibold">Start free</h1>
       <p className="mt-1 text-sm text-muted-foreground">Create your UPDON AI Marketing workspace.</p>
-      <form
-        className="mt-8 space-y-4"
-        action={async (formData) => {
-          setPending(true);
-          setError(null);
-          const result = await signupAction(formData);
-          if (result?.error) setError(result.error);
-          setPending(false);
-        }}
-      >
+      <form action={signupAction} className="mt-8 space-y-4">
         <div className="space-y-2">
           <Label htmlFor="name">Full name</Label>
           <Input id="name" name="name" required />
@@ -99,19 +95,14 @@ export function SignupForm({ googleEnabled }: { googleEnabled: boolean }) {
           <Input id="password" name="password" type="password" required minLength={8} />
         </div>
         {error ? <p className="text-sm text-destructive">{error}</p> : null}
-        <Button type="submit" className="w-full" disabled={pending}>
-          {pending ? "Creating account…" : "Create account"}
-        </Button>
+        <button type="submit" className={cn(buttonVariants(), "w-full")}>
+          Create account
+        </button>
       </form>
       {googleEnabled ? (
-        <Button
-          type="button"
-          variant="outline"
-          className="mt-4 w-full"
-          onClick={() => signIn("google", { callbackUrl: "/onboarding" })}
-        >
+        <Link href="/api/auth/signin/google" className={cn(buttonVariants({ variant: "outline" }), "mt-4 w-full")}>
           Continue with Google
-        </Button>
+        </Link>
       ) : null}
       <p className="mt-6 text-sm text-muted-foreground">
         Already have an account?{" "}
