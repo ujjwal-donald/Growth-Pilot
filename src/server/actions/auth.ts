@@ -9,15 +9,13 @@ import { prisma } from "@/lib/db";
 import { createWorkspaceForUser } from "@/server/services/workspace";
 import crypto from "node:crypto";
 
-function rethrowRedirect(error: unknown) {
-  if (
+function isNextRedirect(error: unknown) {
+  return (
     typeof error === "object" &&
     error !== null &&
     "digest" in error &&
     String((error as { digest?: string }).digest).startsWith("NEXT_REDIRECT")
-  ) {
-    throw error;
-  }
+  );
 }
 
 export async function loginAction(formData: FormData) {
@@ -32,7 +30,10 @@ export async function loginAction(formData: FormData) {
   try {
     await signIn("credentials", { email, password, redirectTo: "/app" });
   } catch (error) {
-    rethrowRedirect(error);
+    // Auth.js may redirect to an internal cursorvm.com host. Stay on the preview origin.
+    if (isNextRedirect(error)) {
+      redirect("/app");
+    }
     if (error instanceof AuthError) {
       redirect("/login?error=invalid");
     }
@@ -85,7 +86,9 @@ export async function signupAction(formData: FormData) {
       redirectTo: "/onboarding",
     });
   } catch (error) {
-    rethrowRedirect(error);
+    if (isNextRedirect(error)) {
+      redirect("/onboarding");
+    }
     if (error instanceof AuthError) {
       redirect("/login?error=created");
     }

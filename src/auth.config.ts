@@ -21,14 +21,28 @@ export const authConfig = {
       const isAdmin = pathname.startsWith("/admin");
 
       if ((isApp || isAdmin) && !isLoggedIn) return false;
-      if (isAuthRoute && isLoggedIn) return Response.redirect(new URL("/app", request.nextUrl));
+      if (isAuthRoute && isLoggedIn) {
+        return new Response(null, { status: 303, headers: { Location: "/app" } });
+      }
       if (isAdmin && auth?.user?.platformRole !== "SUPER_ADMIN") {
-        return Response.redirect(new URL("/app", request.nextUrl));
+        return new Response(null, { status: 303, headers: { Location: "/app" } });
       }
       if (auth?.user?.status === "SUSPENDED" && isApp) {
-        return Response.redirect(new URL("/login?error=suspended", request.nextUrl));
+        return new Response(null, { status: 303, headers: { Location: "/login?error=suspended" } });
       }
       return true;
+    },
+    redirect({ url }) {
+      try {
+        const parsed = new URL(url, "http://localhost");
+        if (parsed.hostname.endsWith("cursorvm.com")) {
+          return `${parsed.pathname}${parsed.search}`;
+        }
+        if (url.startsWith("/")) return url;
+        return `${parsed.pathname}${parsed.search}` || "/app";
+      } catch {
+        return url.startsWith("/") ? url : "/app";
+      }
     },
   },
 } satisfies NextAuthConfig;
