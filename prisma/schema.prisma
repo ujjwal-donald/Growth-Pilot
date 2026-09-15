@@ -338,6 +338,7 @@ model SocialPost {
   imageSuggestion  String?        @db.Text
   suggestedTime    String?
   mediaKey         String?
+  externalPostId   String?
   status           PostStatus     @default(DRAFT)
   scheduledAt      DateTime?
   publishedAt      DateTime?
@@ -352,6 +353,7 @@ model SocialPost {
 
   @@index([workspaceId, status])
   @@index([workspaceId, scheduledAt])
+  @@index([status, scheduledAt])
   @@index([createdById])
 }
 
@@ -501,14 +503,17 @@ model BrandAsset {
 }
 
 model Integration {
-  id          String               @id @default(cuid())
-  workspaceId String
-  provider    IntegrationProvider
-  status      ConnectionStatus     @default(NOT_CONNECTED)
-  lastError   String?              @db.Text
-  metadata    Json?
-  createdAt   DateTime             @default(now())
-  updatedAt   DateTime             @updatedAt
+  id                    String               @id @default(cuid())
+  workspaceId           String
+  provider              IntegrationProvider
+  status                ConnectionStatus     @default(NOT_CONNECTED)
+  lastError             String?              @db.Text
+  metadata              Json?
+  encryptedAccessToken  String?              @db.Text
+  encryptedRefreshToken String?              @db.Text
+  tokenExpiry           DateTime?
+  createdAt             DateTime             @default(now())
+  updatedAt             DateTime             @updatedAt
 
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 

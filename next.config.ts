@@ -10,6 +10,7 @@ const nextConfig: NextConfig = {
   ],
   experimental: {
     serverActions: {
+      bodySizeLimit: "8mb",
       allowedOrigins: [
         "**.agent.cvm.dev",
         "**.cvm.dev",
