@@ -1,5 +1,3 @@
-import { runPublishDuePosts } from "@/server/jobs/publish-scheduled-posts";
-
 const globalForScheduler = globalThis as unknown as { socialPublisher?: NodeJS.Timeout };
 
 export async function register() {
@@ -10,6 +8,7 @@ export async function register() {
   if (!enabled) return;
   if (globalForScheduler.socialPublisher) return;
 
+  const { runPublishDuePosts } = await import("@/server/jobs/publish-scheduled-posts");
   globalForScheduler.socialPublisher = setInterval(() => {
     void runPublishDuePosts().catch((error) => {
       console.error("Scheduled publish worker failed", error);
