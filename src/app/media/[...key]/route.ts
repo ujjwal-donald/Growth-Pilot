@@ -21,19 +21,19 @@ export async function GET(_request: Request, context: { params: Promise<{ key: s
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  const root = path.resolve(process.env.LOCAL_STORAGE_DIR || "./storage");
-  const resolved = path.resolve(root, key);
+  const root = path.resolve(/*turbopackIgnore: true*/ process.cwd(), process.env.LOCAL_STORAGE_DIR || "storage");
+  const resolved = path.resolve(/*turbopackIgnore: true*/ root, key);
   const relative = path.relative(root, resolved);
   if (relative.startsWith("..") || path.isAbsolute(relative)) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
   try {
-    const info = await stat(resolved);
+    const info = await stat(/*turbopackIgnore: true*/ resolved);
     if (!info.isFile()) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
-    const stream = Readable.toWeb(createReadStream(resolved)) as ReadableStream;
+    const stream = Readable.toWeb(createReadStream(/*turbopackIgnore: true*/ resolved)) as ReadableStream;
     const contentType = TYPES[path.extname(resolved).toLowerCase()] ?? "application/octet-stream";
     return new NextResponse(stream, {
       headers: {
