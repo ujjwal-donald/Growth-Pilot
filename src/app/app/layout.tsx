@@ -2,8 +2,15 @@ import { requireWorkspace } from "@/server/auth-context";
 import { AppSidebar } from "@/components/layout/app-sidebar";
 import { AppHeader } from "@/components/layout/app-header";
 import { redirect } from "next/navigation";
+import { cookies } from "next/headers";
+import { unstable_noStore as noStore } from "next/cache";
+
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
+  noStore();
+  await cookies();
   const ctx = await requireWorkspace();
   if (!ctx.workspace.onboardingCompleted) redirect("/onboarding");
 

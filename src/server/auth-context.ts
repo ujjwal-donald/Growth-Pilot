@@ -16,7 +16,12 @@ export async function redirectIfAuthenticated() {
   if (session?.user?.id) redirect("/app");
 }
 
+import { cookies } from "next/headers";
+import { unstable_noStore as noStore } from "next/cache";
+
 export async function requireUser() {
+  noStore();
+  await cookies();
   const session = await auth();
   let user = session?.user;
   if (!user?.id && user?.email) {

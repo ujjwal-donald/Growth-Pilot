@@ -66,7 +66,7 @@ export const dashboardNav: NavGroup[] = [
   {
     label: "Social Media",
     items: [
-      { href: "/app/social/accounts", label: "Accounts", icon: Users },
+      { href: "/app/social/channels", label: "Accounts", icon: Users },
       { href: "/app/social/create", label: "Create Post", icon: Send },
       { href: "/app/social/scheduler", label: "Scheduler", icon: Clock3 },
       { href: "/app/social/published", label: "Published Posts", icon: CheckCircle2 },

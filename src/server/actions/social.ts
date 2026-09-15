@@ -14,7 +14,7 @@ import { originFromHeaders } from "@/lib/http/relative-redirect";
 import { headers } from "next/headers";
 
 function revalidateSocial() {
-  revalidatePath("/app/social/accounts");
+  revalidatePath("/app/social/channels");
   revalidatePath("/app/social/create");
   revalidatePath("/app/social/scheduler");
   revalidatePath("/app/social/published");
@@ -74,7 +74,7 @@ export async function disconnectSocialAccountAction(formData: FormData) {
     },
   });
   revalidateSocial();
-  redirect("/app/social/accounts");
+  redirect("/app/social/channels");
 }
 
 export async function createSocialPostAction(formData: FormData) {

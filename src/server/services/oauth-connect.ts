@@ -13,7 +13,7 @@ function normalizeProvider(platform: string) {
 }
 
 function accountsRedirect(error?: string) {
-  const path = error ? `/app/social/accounts?error=${encodeURIComponent(error)}` : "/app/social/accounts";
+  const path = error ? `/app/social/channels?error=${encodeURIComponent(error)}` : "/app/social/channels";
   return relativeRedirect(path);
 }
 
@@ -47,7 +47,7 @@ export async function resolveOAuthStart(input: {
   const provider = normalizeProvider(input.platformParam);
   const app = getOAuthApp(provider);
   if (!app) {
-    return { href: "/app/social/accounts?error=Unknown%20provider" };
+    return { href: "/app/social/channels?error=Unknown%20provider" };
   }
 
   if (!isOAuthConfigured(provider)) {
@@ -55,7 +55,7 @@ export async function resolveOAuthStart(input: {
       const path =
         app.kind === "analytics"
           ? `/app/integrations?error=${encodeURIComponent(`${app.label} OAuth is not configured.`)}`
-          : `/app/social/accounts?error=${encodeURIComponent(`${app.label} OAuth is not configured.`)}`;
+          : `/app/social/channels?error=${encodeURIComponent(`${app.label} OAuth is not configured.`)}`;
       return { href: path };
     }
     if (app.kind === "analytics") {
@@ -63,7 +63,7 @@ export async function resolveOAuthStart(input: {
       return { href: "/app/integrations" };
     }
     await upsertDemoSocial(input.workspaceId, provider as SocialPlatform);
-    return { href: "/app/social/accounts" };
+    return { href: "/app/social/channels" };
   }
 
   const slug = input.platformParam.toLowerCase();
@@ -88,7 +88,7 @@ export async function resolveOAuthStart(input: {
 export async function startOAuth(request: Request, platformParam: string) {
   const user = await requireSessionUser();
   if (!user?.id) {
-    return relativeRedirect(`/login?callbackUrl=/app/social/accounts`);
+    return relativeRedirect(`/login?callbackUrl=/app/social/channels`);
   }
   if (!user.workspaceId) {
     return relativeRedirect("/onboarding");

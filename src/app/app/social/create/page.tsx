@@ -53,7 +53,7 @@ export default async function CreateSocialPostPage({
         <Card>
           <CardContent className="py-8 text-sm text-muted-foreground">
             Connect an account on{" "}
-            <Link href="/app/social/accounts" className="text-indigo-600">
+            <Link href="/app/social/channels" className="text-indigo-600">
               Social accounts
             </Link>{" "}
             before composing.

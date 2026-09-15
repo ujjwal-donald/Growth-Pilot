@@ -30,9 +30,12 @@ export async function loginAction(formData: FormData) {
   try {
     await signIn("credentials", { email, password, redirectTo: "/app" });
   } catch (error) {
-    // Auth.js may redirect to an internal cursorvm.com host. Stay on the preview origin.
     if (isNextRedirect(error)) {
-      redirect("/app");
+      const digest = String((error as { digest?: string }).digest);
+      if (digest.includes("cursorvm.com")) {
+        redirect("/app");
+      }
+      throw error;
     }
     if (error instanceof AuthError) {
       redirect("/login?error=invalid");
