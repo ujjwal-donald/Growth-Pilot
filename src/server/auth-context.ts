@@ -11,11 +11,29 @@ export class ActionError extends Error {
   }
 }
 
+export async function redirectIfAuthenticated() {
+  const session = await auth();
+  if (session?.user?.id) redirect("/app");
+}
+
 export async function requireUser() {
   const session = await auth();
-  if (!session?.user?.id) redirect("/login");
-  if (session.user.status === "SUSPENDED") redirect("/login?error=suspended");
-  return session.user;
+  let user = session?.user;
+  if (!user?.id && user?.email) {
+    const row = await prisma.user.findUnique({ where: { email: user.email.toLowerCase() } });
+    if (row) {
+      user = {
+        ...user,
+        id: row.id,
+        platformRole: row.platformRole,
+        status: row.status,
+        onboardingCompleted: row.onboardingCompleted,
+      };
+    }
+  }
+  if (!user?.id) redirect("/login");
+  if (user.status === "SUSPENDED") redirect("/login?error=suspended");
+  return user;
 }
 
 export async function requireWorkspace(minimumRole: MemberRole = "VIEWER") {
