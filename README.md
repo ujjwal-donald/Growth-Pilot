@@ -73,6 +73,8 @@ npx prisma generate
 npx prisma db push
 npm run db:seed   # optional: demo@updon.ai / Demo1234!
 npm run dev
+# Listens on IPv4 and IPv6 so Chrome's localhost (::1) works.
+# Open http://localhost:3000
 ```
 
 Open [http://localhost:3000](http://localhost:3000).
