@@ -1,0 +1,15 @@
+services:
+  db:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: updon
+      POSTGRES_PASSWORD: updon_dev_password
+      POSTGRES_DB: updon_ai_marketing
+    ports:
+      - "5432:5432"
+    volumes:
+      - updon_pg:/var/lib/postgresql/data
+
+volumes:
+  updon_pg:
