@@ -37,13 +37,15 @@ Server actions / Route handlers   ← keep this boundary so a separate API can r
 
 ## Environments (dev / test / prod)
 
-This app is meant to run from GitHub with **three Neon databases** and **three GitHub Environments**. Connection strings stay in GitHub secrets — they are never committed.
+The complete app lives on Git. Work is promoted across **three git branches**, each mapped to a **GitHub Environment** and a **Neon database**. Connection strings stay in GitHub secrets — they are never committed.
 
-| GitHub Environment | `APP_ENV` / `NODE_ENV` | Neon project | Typical use |
-| --- | --- | --- | --- |
-| `development` | `development` | Neon **dev** branch/db | Preview deploys, agent testing |
-| `test` | `test` | Neon **test** branch/db | CI `prisma migrate deploy` |
-| `production` | `production` | Neon **prod** branch/db | Live app |
+| Git branch | GitHub Environment | `APP_ENV` | Neon database | Typical use |
+| --- | --- | --- | --- | --- |
+| `development` | `development` | `development` | Neon **dev** | Day-to-day work, previews |
+| `test` | `test` | `test` | Neon **test** | Staging / QA |
+| `production` | `production` | `production` | Neon **prod** | Live app |
+
+**Promote flow:** merge into `development` → merge `development` into `test` → merge `test` into `production`. Do not commit `.env` files.
 
 Create those names under the repo **Settings → Environments**. In each environment add:
 
@@ -65,7 +67,7 @@ npm run prisma:target   # prints host / database name only — no passwords
 
 Do not put `.env` in git. Copy `.env.example` only on a machine that needs to run commands, then paste the matching Neon URLs from the GitHub Environment.
 
-CI (`.github/workflows/ci.yml`) runs generate + lint + typecheck on every PR. On push to `main` it can run `prisma migrate deploy` against the **test** environment when those secrets exist.
+CI (`.github/workflows/ci.yml`) runs generate + lint + typecheck on PRs and on pushes to `development`, `test`, `production`, and `main`. A push to an environment branch runs `prisma migrate deploy` against the matching GitHub Environment when those secrets exist. Migrations are skipped until `prisma/migrations` has a committed migration.
 
 ### How to test Phase 1
 
