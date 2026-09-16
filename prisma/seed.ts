@@ -4,7 +4,11 @@ import { PrismaClient, PlanTier, SocialPlatform } from "../src/generated/prisma/
 import { PrismaPg } from "@prisma/adapter-pg";
 
 async function main() {
-  const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
+  const connectionString = process.env.DATABASE_URL;
+  if (!connectionString) {
+    throw new Error("DATABASE_URL is not set");
+  }
+  const adapter = new PrismaPg({ connectionString });
   const prisma = new PrismaClient({ adapter });
 
   const email = "demo@updon.ai";

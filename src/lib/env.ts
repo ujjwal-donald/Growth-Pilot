@@ -4,6 +4,7 @@ const optionalString = z.string().optional().or(z.literal(""));
 
 export const envSchema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
+  APP_ENV: z.enum(["development", "test", "production"]).optional(),
   NEXT_PUBLIC_APP_NAME: z.string().default("UPDON AI Marketing"),
   NEXT_PUBLIC_APP_URL: z.string().default("http://localhost:3000"),
   AUTH_SECRET: z.string().min(1, "AUTH_SECRET is required"),
@@ -11,6 +12,7 @@ export const envSchema = z.object({
   GOOGLE_CLIENT_ID: optionalString,
   GOOGLE_CLIENT_SECRET: optionalString,
   DATABASE_URL: z.string().min(1, "DATABASE_URL is required"),
+  DIRECT_URL: optionalString,
   ADMIN_EMAIL: optionalString,
   AI_PROVIDER: z.string().default("openai"),
   OPENAI_API_KEY: optionalString,

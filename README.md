@@ -35,49 +35,37 @@ Server actions / Route handlers   ← keep this boundary so a separate API can r
 | 3 | SEO crawler, live keyword APIs, competitor crawl |
 | 4 | Ad network publish, lead automation, agency white-label, PDF reports |
 
-## Local setup
+## Environments (dev / test / prod)
 
-### 1. Prerequisites
+This app is meant to run from GitHub with **three Neon databases** and **three GitHub Environments**. Connection strings stay in GitHub secrets — they are never committed.
 
-- Node.js 22+
-- PostgreSQL 16 (local, Docker, Neon, or Supabase)
+| GitHub Environment | `APP_ENV` / `NODE_ENV` | Neon project | Typical use |
+| --- | --- | --- | --- |
+| `development` | `development` | Neon **dev** branch/db | Preview deploys, agent testing |
+| `test` | `test` | Neon **test** branch/db | CI `prisma migrate deploy` |
+| `production` | `production` | Neon **prod** branch/db | Live app |
 
-### 2. Install
+Create those names under the repo **Settings → Environments**. In each environment add:
 
-```bash
-npm install
-cp .env.example .env.local
-cp .env.example .env
-```
-
-Prisma CLI reads `.env`. Next.js reads `.env.local`. Keep `DATABASE_URL` in both.
-
-### 3. Required environment variables
-
-| Variable | Purpose |
+| Secret | Value |
 | --- | --- |
-| `DATABASE_URL` | PostgreSQL connection string |
-| `AUTH_SECRET` | Auth.js secret (`openssl rand -base64 32`) |
-| `AUTH_URL` / `NEXT_PUBLIC_APP_URL` | App origin, e.g. `http://localhost:3000` |
-| `TOKEN_ENCRYPTION_KEY` | Encrypts social tokens (32+ chars) |
-| `OPENAI_API_KEY` | Optional. Without it, AI uses a structured demo provider |
-| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | Optional Google login |
-| `ADMIN_EMAIL` | Optional. Matching signups become platform admins |
+| `DATABASE_URL` | Neon **pooled** URI (hostname contains `-pooler`) |
+| `DIRECT_URL` | Neon **direct** URI (no `-pooler`) |
+| `AUTH_SECRET` | Long random secret |
+| `TOKEN_ENCRYPTION_KEY` | Long random secret |
 
-Leave Stripe / Razorpay / S3 / R2 empty until credentials exist.
-
-### 4. Database
+Prisma CLI (`migrate`, `db push`) uses `DIRECT_URL` when set. The Next.js app uses `DATABASE_URL`.
 
 ```bash
 npx prisma generate
-npx prisma db push
-npm run db:seed   # optional: demo@updon.ai / Demo1234!
-npm run dev
-# Listens on IPv4 and IPv6 so Chrome's localhost (::1) works.
-# Open http://localhost:3000
+npm run prisma:target   # prints host / database name only — no passwords
+# After you review the host, create the first migration when you are ready:
+# npx prisma migrate dev --name init
 ```
 
-Open [http://localhost:3000](http://localhost:3000).
+Do not put `.env` in git. Copy `.env.example` only on a machine that needs to run commands, then paste the matching Neon URLs from the GitHub Environment.
+
+CI (`.github/workflows/ci.yml`) runs generate + lint + typecheck on every PR. On push to `main` it can run `prisma migrate deploy` against the **test** environment when those secrets exist.
 
 ### How to test Phase 1
 
@@ -89,7 +77,7 @@ Open [http://localhost:3000](http://localhost:3000).
 6. Update Brand Profile and confirm later AI replies mention the business.
 7. If `ADMIN_EMAIL` matched your signup, open `/admin`.
 
-Forgot-password prints a reset URL in the terminal during development.
+Forgot-password prints a reset URL in the server logs during development.
 
 ## Scripts
 
@@ -97,12 +85,12 @@ Forgot-password prints a reset URL in the terminal during development.
 npm run typecheck
 npm run lint
 npm run build
+npm run prisma:target
 ```
 
 ## Deployment
 
-- **Vercel + Neon/Supabase:** set the env vars above, run migrations (`prisma migrate deploy` after the first migration is committed), and deploy.
-- **Docker:** `docker compose up db` for Postgres; `docker build` for the app image (see `Dockerfile`).
+Point the host (Vercel, Render, or similar) at this repository. Map **dev / test / prod** to the three GitHub Environments (or the host’s equivalent env groups) and set the same secrets. After the first migration is committed, production deploys should run `npx prisma migrate deploy` against `DIRECT_URL`.
 
 ## Design
 
