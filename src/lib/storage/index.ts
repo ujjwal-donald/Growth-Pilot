@@ -1,13 +1,7 @@
-export type StoredObject = {
-  key: string;
-  url: string;
-  contentType: string;
-};
+import { AwsS3Driver } from "@/lib/aws/s3";
+import type { StorageDriver, StoredObject } from "@/lib/storage/types";
 
-export interface StorageDriver {
-  put(input: { key: string; body: Buffer; contentType: string }): Promise<StoredObject>;
-  getUrl(key: string): Promise<string>;
-}
+export type { StorageDriver, StoredObject };
 
 export class LocalStorageDriver implements StorageDriver {
   constructor(private readonly baseDir = process.env.LOCAL_STORAGE_DIR || "./storage") {}
@@ -26,12 +20,12 @@ export class LocalStorageDriver implements StorageDriver {
   }
 }
 
-export class S3CompatibleDriver implements StorageDriver {
+export class R2StorageDriver implements StorageDriver {
   constructor(private readonly config: { bucket: string; publicBaseUrl?: string }) {}
 
   async put(): Promise<StoredObject> {
     throw new Error(
-      "S3/R2 storage is configured in architecture but credentials are not connected yet. Set STORAGE_DRIVER=local for development.",
+      "Cloudflare R2 is an optional S3-compatible target. Set STORAGE_DRIVER=s3 for AWS or STORAGE_DRIVER=local for development.",
     );
   }
 
@@ -39,15 +33,17 @@ export class S3CompatibleDriver implements StorageDriver {
     if (this.config.publicBaseUrl) {
       return `${this.config.publicBaseUrl}/${key}`;
     }
-    throw new Error("Object storage public URL is not configured");
+    throw new Error("R2 public URL is not configured");
   }
 }
 
 export function getStorageDriver(): StorageDriver {
   const driver = process.env.STORAGE_DRIVER || "local";
-  if (driver === "s3" || driver === "r2") {
-    return new S3CompatibleDriver({
-      bucket: process.env.AWS_S3_BUCKET || process.env.R2_BUCKET || "",
+  if (driver === "s3") return new AwsS3Driver();
+  if (driver === "r2") {
+    return new R2StorageDriver({
+      bucket: process.env.R2_BUCKET || "",
+      publicBaseUrl: process.env.R2_PUBLIC_BASE_URL,
     });
   }
   return new LocalStorageDriver();

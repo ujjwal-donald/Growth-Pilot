@@ -13,7 +13,7 @@ export default async function SettingsPage() {
 
   return (
     <div>
-      <PageHeader title="Settings" description="Account, agency white-label, and live adapter status." />
+      <PageHeader title="Settings" description="Account, agency white-label, AWS cloud adapters, and live provider status." />
       <Card className="mb-6">
         <CardContent className="space-y-2 pt-6 text-sm">
           <p>
@@ -56,13 +56,30 @@ export default async function SettingsPage() {
           <p>
             AI: {architecture.adapters.ai.id} {architecture.adapters.ai.live ? "(live)" : "(demo)"}
           </p>
-          <p>Storage: {architecture.adapters.storage.id}</p>
+          <p>
+            Storage: {architecture.adapters.storage.id}
+            {architecture.adapters.storage.live ? "" : " (not connected)"}
+          </p>
+          <p>Email: {architecture.adapters.email.id}</p>
           <p>
             Ads: {architecture.adapters.ads.map((n) => `${n.label}${n.configured ? "*" : ""}`).join(", ")}
           </p>
           <p>
             Billing: {architecture.adapters.billing.map((n) => `${n.label}${n.configured ? "*" : ""}`).join(", ")}
           </p>
+          <div className="pt-2">
+            <p className="font-medium text-foreground">
+              AWS ({architecture.adapters.aws.region}
+              {architecture.adapters.aws.credentialsPresent ? ", credentials present" : ", credentials not set"})
+            </p>
+            <ul className="mt-2 list-disc pl-5 text-muted-foreground">
+              {architecture.adapters.aws.services.map((service) => (
+                <li key={service.id}>
+                  {service.label}: {service.configured ? "configured" : "not connected"} — {service.role}
+                </li>
+              ))}
+            </ul>
+          </div>
         </CardContent>
       </Card>
     </div>

@@ -15,7 +15,7 @@ export default async function BrandAssetsPage() {
 
   return (
     <div>
-      <PageHeader title="Assets" description="Logos and creative stored through the storage adapter (local now, S3/R2 later)." />
+      <PageHeader title="Assets" description="Logos and creative go through the storage adapter: local disk now, Amazon S3 + CloudFront when STORAGE_DRIVER=s3." />
       <form action={uploadBrandAssetAction} encType="multipart/form-data" className="mb-8 grid max-w-xl gap-3">
         <div className="space-y-1">
           <Label>Name</Label>

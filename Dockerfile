@@ -24,4 +24,5 @@ COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/prisma.config.ts ./prisma.config.ts
 COPY --from=builder /app/src/generated ./src/generated
 EXPOSE 3000
+# Production runtime: Amazon ECS Fargate or App Runner. IAM task role should replace static keys.
 CMD ["npm", "start"]

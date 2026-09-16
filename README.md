@@ -13,13 +13,13 @@ Browser (Next.js App Router)
   └── SaaS dashboard (RBAC + workspace isolation)
         │
         ▼
-Server actions / Route handlers   ← keep this boundary so a separate API can replace it later
+Server actions / Route handlers
         │
-        ├── Prisma (PostgreSQL)
-        ├── AI provider abstraction (OpenAI now, Gemini/Claude later)
-        ├── Storage abstraction (local now, S3/R2 later)
+        ├── Prisma (Neon or Amazon RDS/Aurora)
+        ├── AWS: S3 + CloudFront, SES, SQS, EventBridge, IAM
+        ├── AI provider abstraction (OpenAI, Anthropic, Gemini)
         ├── Social adapters (Meta, LinkedIn, X, YouTube, GBP)
-        └── Keyword providers (demo now, Keyword Planner / DataForSEO later)
+        └── Keyword / ads / billing adapters
 ```
 
 **Multi-tenant rule:** every customer record has `workspaceId`. Users join workspaces through `WorkspaceMember` with roles Owner / Admin / Marketer / Editor / Viewer.
@@ -49,7 +49,7 @@ The complete app lives on Git. Work is promoted across **three git branches**, e
 
 **Promote flow:** merge into `development` → merge `development` into `test` → merge `test` into `production`. Do not commit `.env` files.
 
-Create those names under the repo **Settings → Environments**. In each environment add:
+Create those names under the repo **Settings → Environments**. In each environment add Neon URLs plus, when you are ready for AWS: `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_REGION`, `AWS_S3_BUCKET`.
 
 | Secret | Value |
 | --- | --- |
@@ -57,6 +57,10 @@ Create those names under the repo **Settings → Environments**. In each environ
 | `DIRECT_URL` | Neon **direct** URI (no `-pooler`) |
 | `AUTH_SECRET` | Long random secret |
 | `TOKEN_ENCRYPTION_KEY` | Long random secret |
+| `AWS_ACCESS_KEY_ID` | IAM user or CI key (omit on ECS if using a task role) |
+| `AWS_SECRET_ACCESS_KEY` | Matching secret |
+| `AWS_REGION` | e.g. `ap-south-1` |
+| `AWS_S3_BUCKET` | Per-environment bucket |
 
 Prisma CLI (`migrate`, `db push`) uses `DIRECT_URL` when set. The Next.js app uses `DATABASE_URL`.
 
@@ -94,7 +98,7 @@ npm run prisma:target
 
 ## Deployment
 
-Point the host (Vercel, Render, or similar) at this repository. Map **dev / test / prod** to the three GitHub Environments (or the host’s equivalent env groups) and set the same secrets. After the first migration is committed, production deploys should run `npx prisma migrate deploy` against `DIRECT_URL`.
+Point the host at this repository: Amazon ECS Fargate / App Runner (see `Dockerfile`), or Vercel/Render. Map **dev / test / prod** to the three GitHub Environments and set Neon plus AWS secrets. After the first migration is committed, production deploys should run `npx prisma migrate deploy` against `DIRECT_URL`. Set `STORAGE_DRIVER=s3` when the bucket is ready.
 
 ## Design
 

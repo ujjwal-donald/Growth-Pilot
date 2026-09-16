@@ -22,6 +22,14 @@ export const envSchema = z.object({
   TOKEN_ENCRYPTION_KEY: z.string().min(16).optional().or(z.literal("")),
   STORAGE_DRIVER: z.enum(["local", "s3", "r2"]).default("local"),
   LOCAL_STORAGE_DIR: z.string().default("./storage"),
+  AWS_REGION: optionalString,
+  AWS_ACCESS_KEY_ID: optionalString,
+  AWS_SECRET_ACCESS_KEY: optionalString,
+  AWS_S3_BUCKET: optionalString,
+  AWS_CLOUDFRONT_DOMAIN: optionalString,
+  AWS_SES_FROM: optionalString,
+  EMAIL_DRIVER: optionalString,
+  AWS_SQS_PUBLISH_QUEUE_URL: optionalString,
 });
 
 export type AppEnv = z.infer<typeof envSchema>;

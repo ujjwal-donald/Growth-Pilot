@@ -119,9 +119,20 @@ export async function requestPasswordResetAction(formData: FormData) {
   const resetUrl = `${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/reset-password?token=${token}`;
   if (process.env.NODE_ENV !== "production") {
     console.info("[dev] Password reset URL:", resetUrl);
+  }
+  try {
+    const { getEmailDriver } = await import("@/lib/aws/ses");
+    await getEmailDriver().send({
+      to: email,
+      subject: "Reset your UPDON password",
+      text: `Reset your password: ${resetUrl}\nThis link expires in one hour.`,
+    });
+  } catch (error) {
+    console.error("Password reset email failed", error instanceof Error ? error.message : error);
+  }
+  if (process.env.NODE_ENV !== "production") {
     return { ok: true, devResetUrl: resetUrl };
   }
-
   return { ok: true };
 }
 
