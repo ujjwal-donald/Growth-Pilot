@@ -1,0 +1,46 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [development, test, production, main]
+  push:
+    branches: [development, test, production, main]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    env:
+      # generate does not open a TCP connection; a placeholder satisfies prisma.config.ts
+      DATABASE_URL: postgresql://ci:ci@127.0.0.1:5432/ci
+      AUTH_SECRET: ci-placeholder-secret
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci
+      - run: npx prisma generate
+      - run: npm run typecheck
+      - run: npm run lint
+
+  migrate:
+    if: github.event_name == 'push' && contains(fromJSON('["development","test","production"]'), github.ref_name)
+    needs: check
+    runs-on: ubuntu-latest
+    environment: ${{ github.ref_name }}
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      DIRECT_URL: ${{ secrets.DIRECT_URL }}
+      AUTH_SECRET: ${{ secrets.AUTH_SECRET }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci
+      - run: npx prisma generate
+      - name: Apply migrations to the ${{ github.ref_name }} Neon database
+        if: ${{ env.DIRECT_URL != '' || env.DATABASE_URL != '' }}
+        run: npx prisma migrate deploy

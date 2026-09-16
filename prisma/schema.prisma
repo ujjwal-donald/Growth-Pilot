@@ -1,0 +1,675 @@
+// UPDON AI Marketing — Prisma schema (Phase 1+)
+// All tenant data is scoped by workspaceId for multi-tenant isolation.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  // URL is set in prisma.config.ts from DIRECT_URL (CLI) or DATABASE_URL.
+}
+
+enum PlatformRole {
+  USER
+  SUPER_ADMIN
+}
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+}
+
+enum MemberRole {
+  OWNER
+  ADMIN
+  MARKETER
+  EDITOR
+  VIEWER
+}
+
+enum InviteStatus {
+  PENDING
+  ACCEPTED
+  REVOKED
+}
+
+enum SocialPlatform {
+  INSTAGRAM
+  FACEBOOK
+  LINKEDIN
+  X
+  YOUTUBE
+  GOOGLE_BUSINESS
+}
+
+enum ConnectionStatus {
+  CONNECTED
+  NOT_CONNECTED
+  ERROR
+  EXPIRED
+}
+
+enum PostStatus {
+  DRAFT
+  SCHEDULED
+  PUBLISHING
+  PUBLISHED
+  FAILED
+}
+
+enum SeoIssuePriority {
+  CRITICAL
+  HIGH
+  MEDIUM
+  LOW
+}
+
+enum LeadStatus {
+  NEW
+  CONTACTED
+  QUALIFIED
+  PROPOSAL
+  WON
+  LOST
+}
+
+enum PlanTier {
+  FREE
+  STARTER
+  GROWTH
+  AGENCY
+}
+
+enum SubscriptionStatus {
+  TRIALING
+  ACTIVE
+  PAST_DUE
+  CANCELED
+}
+
+enum BillingProvider {
+  NONE
+  STRIPE
+  RAZORPAY
+}
+
+enum InvoiceStatus {
+  DRAFT
+  OPEN
+  PAID
+  VOID
+  UNCOLLECTIBLE
+}
+
+enum IntegrationProvider {
+  FACEBOOK
+  INSTAGRAM
+  LINKEDIN
+  X
+  YOUTUBE
+  GOOGLE_BUSINESS
+  GOOGLE_ANALYTICS
+  GOOGLE_SEARCH_CONSOLE
+  GOOGLE_ADS
+}
+
+enum AssetType {
+  LOGO
+  IMAGE
+  FONT
+  OTHER
+}
+
+enum CampaignStatus {
+  DRAFT
+  ACTIVE
+  PAUSED
+  COMPLETED
+}
+
+enum CampaignKind {
+  ADS
+  LEAD
+}
+
+model User {
+  id                 String       @id @default(cuid())
+  name               String?
+  email              String       @unique
+  emailVerified      DateTime?
+  image              String?
+  passwordHash       String?
+  companyName        String?
+  platformRole       PlatformRole @default(USER)
+  status             UserStatus   @default(ACTIVE)
+  onboardingCompleted Boolean     @default(false)
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+
+  accounts           Account[]
+  sessions           Session[]
+  memberships        WorkspaceMember[]
+  ownedWorkspaces    Workspace[]          @relation("WorkspaceOwner")
+  posts              SocialPost[]
+  aiGenerations      AiGeneration[]
+  notifications      Notification[]
+  auditLogs          AuditLog[]
+  passwordResets     PasswordResetToken[]
+  createdLeads       Lead[]               @relation("LeadCreator")
+
+  @@index([status])
+  @@index([platformRole])
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model VerificationToken {
+  identifier String
+  token      String
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Workspace {
+  id                   String   @id @default(cuid())
+  name                 String
+  slug                 String   @unique
+  ownerId              String
+  onboardingCompleted  Boolean  @default(false)
+  whiteLabelEnabled    Boolean  @default(false)
+  whiteLabelPrimary    String?
+  whiteLabelAccent     String?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  owner                User     @relation("WorkspaceOwner", fields: [ownerId], references: [id])
+  members              WorkspaceMember[]
+  businessProfile      BusinessProfile?
+  socialAccounts       SocialAccount[]
+  socialPosts          SocialPost[]
+  contentCalendars     ContentCalendar[]
+  seoAudits            SeoAudit[]
+  keywords             Keyword[]
+  competitors          Competitor[]
+  campaigns            Campaign[]
+  leads                Lead[]
+  analyticsSnapshots   AnalyticsSnapshot[]
+  brandAssets          BrandAsset[]
+  integrations         Integration[]
+  subscription         Subscription?
+  invoices             Invoice[]
+  aiGenerations        AiGeneration[]
+  notifications        Notification[]
+  auditLogs            AuditLog[]
+  seoPages             SeoPage[]
+  reports              MarketingReport[]
+
+  @@index([ownerId])
+}
+
+model WorkspaceMember {
+  id           String       @id @default(cuid())
+  workspaceId  String
+  userId       String
+  role         MemberRole   @default(VIEWER)
+  inviteStatus InviteStatus @default(ACCEPTED)
+  invitedEmail String?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, userId])
+  @@index([userId])
+  @@index([workspaceId])
+}
+
+model BusinessProfile {
+  id                 String   @id @default(cuid())
+  workspaceId        String   @unique
+  businessName       String
+  website            String?
+  industry           String?
+  targetAudience     String?
+  description        String?  @db.Text
+  country            String?
+  primaryGoal        String?
+  platforms          SocialPlatform[]
+  brandTone          String?
+  customBrandTone    String?
+  brandColors        Json?
+  products           String[] @default([])
+  services           String[] @default([])
+  competitors        String[] @default([])
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+}
+
+model SocialAccount {
+  id                    String           @id @default(cuid())
+  workspaceId           String
+  platform              SocialPlatform
+  accountName           String
+  externalAccountId     String?
+  encryptedAccessToken  String?          @db.Text
+  encryptedRefreshToken String?          @db.Text
+  tokenExpiry           DateTime?
+  connectionStatus      ConnectionStatus @default(NOT_CONNECTED)
+  lastError             String?          @db.Text
+  createdAt             DateTime         @default(now())
+  updatedAt             DateTime         @updatedAt
+
+  workspace Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  posts     SocialPost[]
+
+  @@index([workspaceId, platform])
+}
+
+model ContentCalendar {
+  id                String   @id @default(cuid())
+  workspaceId       String
+  name              String
+  month             Int
+  year              Int
+  goal              String?
+  platforms         SocialPlatform[]
+  postingFrequency  String?
+  generatedPlan     Json?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  workspace Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  posts     SocialPost[]
+
+  @@index([workspaceId, year, month])
+}
+
+model SocialPost {
+  id               String         @id @default(cuid())
+  workspaceId      String
+  socialAccountId  String?
+  calendarId       String?
+  createdById      String
+  platform         SocialPlatform
+  contentType      String?
+  goal             String?
+  topic            String?
+  tone             String?
+  language         String         @default("English")
+  copy             String         @db.Text
+  cta              String?
+  hashtags         String[]       @default([])
+  imageSuggestion  String?        @db.Text
+  suggestedTime    String?
+  mediaKey         String?
+  externalPostId   String?
+  status           PostStatus     @default(DRAFT)
+  scheduledAt      DateTime?
+  publishedAt      DateTime?
+  lastError        String?        @db.Text
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  workspace     Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  socialAccount SocialAccount?   @relation(fields: [socialAccountId], references: [id], onDelete: SetNull)
+  calendar      ContentCalendar? @relation(fields: [calendarId], references: [id], onDelete: SetNull)
+  createdBy     User             @relation(fields: [createdById], references: [id])
+
+  @@index([workspaceId, status])
+  @@index([workspaceId, scheduledAt])
+  @@index([status, scheduledAt])
+  @@index([createdById])
+}
+
+model SeoAudit {
+  id         String   @id @default(cuid())
+  workspaceId String
+  url        String
+  score      Int      @default(0)
+  summary    String?  @db.Text
+  raw        Json?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  workspace Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  issues    SeoIssue[]
+  pages     SeoPage[]
+
+  @@index([workspaceId, createdAt])
+}
+
+model SeoIssue {
+  id          String            @id @default(cuid())
+  auditId     String
+  title       String
+  description String            @db.Text
+  priority    SeoIssuePriority
+  category    String
+  pageUrl     String?
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  audit SeoAudit @relation(fields: [auditId], references: [id], onDelete: Cascade)
+
+  @@index([auditId, priority])
+}
+
+model SeoPage {
+  id               String   @id @default(cuid())
+  workspaceId      String
+  auditId          String?
+  url              String
+  title            String?
+  metaDescription  String?
+  h1               String?
+  wordCount        Int?
+  score            Int      @default(0)
+  findings         Json?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  audit     SeoAudit? @relation(fields: [auditId], references: [id], onDelete: SetNull)
+
+  @@index([workspaceId, score])
+}
+
+model Keyword {
+  id           String   @id @default(cuid())
+  workspaceId  String
+  keyword      String
+  searchVolume Int?
+  difficulty   Int?
+  intent       String?
+  trend        String?
+  competition  String?
+  provider     String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, keyword])
+}
+
+model Competitor {
+  id                 String   @id @default(cuid())
+  workspaceId        String
+  website            String
+  name               String?
+  seoScore           Int?
+  estimatedKeywords  Int?
+  contentTopics      Json?
+  socialPresence     Json?
+  strengths          Json?
+  weaknesses         Json?
+  opportunities      Json?
+  strategy           String?  @db.Text
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId])
+}
+
+model Campaign {
+  id                String          @id @default(cuid())
+  workspaceId       String
+  name              String
+  goal              String?
+  audience          String?         @db.Text
+  channels          String[]        @default([])
+  budget            Decimal?        @db.Decimal(12, 2)
+  currency          String          @default("INR")
+  startDate         DateTime?
+  endDate           DateTime?
+  status            CampaignStatus  @default(DRAFT)
+  kind              CampaignKind    @default(ADS)
+  network           String?
+  metrics           Json?
+  aiRecommendations Json?
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  leads     Lead[]
+
+  @@index([workspaceId, status])
+  @@index([workspaceId, kind])
+}
+
+model Lead {
+  id          String     @id @default(cuid())
+  workspaceId String
+  createdById String?
+  name        String
+  email       String?
+  phone       String?
+  company     String?
+  source      String?
+  status      LeadStatus @default(NEW)
+  value       Decimal?   @db.Decimal(12, 2)
+  notes       String?    @db.Text
+  campaignId  String?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  createdBy User?     @relation("LeadCreator", fields: [createdById], references: [id])
+  campaign  Campaign? @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+
+  @@index([workspaceId, status])
+  @@index([workspaceId, email])
+}
+
+model AnalyticsSnapshot {
+  id          String   @id @default(cuid())
+  workspaceId String
+  date        DateTime
+  source      String
+  metrics     Json
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, date, source])
+  @@index([workspaceId, date])
+}
+
+model MarketingReport {
+  id          String   @id @default(cuid())
+  workspaceId String
+  title       String
+  periodStart DateTime
+  periodEnd   DateTime
+  body        String   @db.Text
+  metrics     Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, createdAt])
+}
+
+model BrandAsset {
+  id          String    @id @default(cuid())
+  workspaceId String
+  type        AssetType
+  name        String
+  storageKey  String
+  mimeType    String?
+  url         String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, type])
+}
+
+model Integration {
+  id                    String               @id @default(cuid())
+  workspaceId           String
+  provider              IntegrationProvider
+  status                ConnectionStatus     @default(NOT_CONNECTED)
+  lastError             String?              @db.Text
+  metadata              Json?
+  encryptedAccessToken  String?              @db.Text
+  encryptedRefreshToken String?              @db.Text
+  tokenExpiry           DateTime?
+  createdAt             DateTime             @default(now())
+  updatedAt             DateTime             @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, provider])
+}
+
+model Subscription {
+  id                     String             @id @default(cuid())
+  workspaceId            String             @unique
+  plan                   PlanTier           @default(FREE)
+  status                 SubscriptionStatus @default(ACTIVE)
+  provider               BillingProvider    @default(NONE)
+  providerCustomerId     String?
+  providerSubscriptionId String?
+  currentPeriodStart     DateTime           @default(now())
+  currentPeriodEnd       DateTime
+  aiGenerationsUsed      Int                @default(0)
+  createdAt              DateTime           @default(now())
+  updatedAt              DateTime           @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  invoices  Invoice[]
+}
+
+model Invoice {
+  id               String        @id @default(cuid())
+  workspaceId      String
+  subscriptionId   String?
+  amountCents      Int
+  currency         String        @default("INR")
+  status           InvoiceStatus @default(DRAFT)
+  provider         BillingProvider @default(NONE)
+  providerInvoiceId String?
+  hostedInvoiceUrl String?
+  periodStart      DateTime?
+  periodEnd        DateTime?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  workspace    Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  subscription Subscription? @relation(fields: [subscriptionId], references: [id])
+
+  @@index([workspaceId, createdAt])
+}
+
+model AiGeneration {
+  id               String   @id @default(cuid())
+  userId           String
+  workspaceId      String
+  feature          String
+  model            String
+  promptTokens     Int      @default(0)
+  completionTokens Int      @default(0)
+  estimatedCostUsd Decimal  @default(0) @db.Decimal(12, 6)
+  status           String   @default("success")
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  user      User      @relation(fields: [userId], references: [id])
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, createdAt])
+  @@index([userId, createdAt])
+  @@index([feature])
+}
+
+model Notification {
+  id          String    @id @default(cuid())
+  userId      String
+  workspaceId String?
+  type        String
+  title       String
+  body        String    @db.Text
+  href        String?
+  readAt      DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace Workspace? @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([userId, readAt])
+  @@index([workspaceId])
+}
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  actorUserId String?
+  workspaceId String?
+  action      String
+  entity      String
+  entityId    String?
+  metadata    Json?
+  ip          String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  actor     User?      @relation(fields: [actorUserId], references: [id])
+  workspace Workspace? @relation(fields: [workspaceId], references: [id], onDelete: SetNull)
+
+  @@index([workspaceId, createdAt])
+  @@index([actorUserId, createdAt])
+  @@index([action])
+}
