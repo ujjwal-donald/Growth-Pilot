@@ -3,10 +3,12 @@ import { PLANS, formatInr, getPlan } from "@/lib/billing/plans";
 import { requireWorkspace } from "@/server/auth-context";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { buttonVariants } from "@/components/ui/button";
+import { getBillingGateways } from "@/lib/billing/gateway";
 
 export default async function BillingPage() {
   const ctx = await requireWorkspace();
   const current = getPlan(ctx.subscription?.plan ?? "FREE");
+  const gateways = getBillingGateways();
 
   return (
     <div>
@@ -16,7 +18,7 @@ export default async function BillingPage() {
       />
       <p className="mb-6 text-sm text-muted-foreground">
         Current plan: <strong>{current.name}</strong> · AI usage {ctx.subscription?.aiGenerationsUsed ?? 0}/
-        {current.aiGenerationsPerMonth}
+        {current.aiGenerationsPerMonth}. {gateways.map((g) => g.checkoutMessage(current.name)).join(" ")}
       </p>
       <div className="grid gap-4 md:grid-cols-4">
         {PLANS.map((plan) => (

@@ -71,6 +71,44 @@ export class DemoAiProvider implements AiProvider {
       };
     }
 
+    if (lower.includes("caption")) {
+      return {
+        captions: [
+          { text: "A customer outcome in one line. Proof in the next.", cta: "Save this", hashtags: ["#SmallBusiness"] },
+          { text: "We shipped the weekly plan so you do not have to guess tonight.", cta: "Start Free", hashtags: ["#AIMarketing"] },
+          { text: "Consistency beats virality. Here is this week's cadence.", cta: "Follow for more", hashtags: ["#ContentStrategy"] },
+        ],
+      };
+    }
+
+    if (lower.includes("hashtag")) {
+      return {
+        primary: ["#DigitalMarketing", "#AIMarketing", "#ContentStrategy"],
+        niche: ["#LocalSEO", "#B2BContent", "#FounderLed"],
+        avoid: ["#Follow4Follow", "#Crypto"],
+      };
+    }
+
+    if (lower.includes("content pieces") || lower.includes("propose 6")) {
+      return {
+        ideas: [
+          { title: "30-day content operating system", format: "Blog", keyword: "ai marketing system", outline: "Cadence, tools, KPIs" },
+          { title: "Before/after SEO audit", format: "Carousel", keyword: "website audit", outline: "Score, fixes, results" },
+        ],
+      };
+    }
+
+    if (lower.includes("campaign plan") || lower.includes("recommend a campaign")) {
+      return {
+        channels: ["LinkedIn", "Google Search", "Email"],
+        contentStrategy: "Proof posts mid-week, offer posts on Thursday, recap Friday.",
+        budgetAllocation: { linkedin: "40%", google: "40%", creative: "20%" },
+        postingFrequency: "5 organic posts / week + 1 always-on search campaign",
+        adCopy: "Stop guessing your marketing calendar. UPDON runs the weekly engine.",
+        kpis: ["Leads", "Cost per qualified conversation", "Organic traffic"],
+      };
+    }
+
     if (lower.includes("ad")) {
       return {
         variations: [

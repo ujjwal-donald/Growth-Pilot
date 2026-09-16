@@ -30,8 +30,8 @@ const steps = [
 ];
 
 const faqs = [
-  { q: "Can I use UPDON without connecting social accounts?", a: "Yes. Phase 1 lets you generate, save drafts, and schedule internally. Connect Meta, LinkedIn, X, YouTube, and Google in Phase 2." },
-  { q: "Which AI models do you support?", a: "OpenAI is wired first through a provider abstraction. Gemini, Claude, and others can be added without changing product features." },
+  { q: "Can I use UPDON without connecting social accounts?", a: "Yes. Generate, save drafts, and schedule internally. Connect Meta, LinkedIn, X, YouTube, and Google when you are ready to publish." },
+  { q: "Which AI models do you support?", a: "OpenAI, Anthropic, and Gemini adapters are in the architecture. The demo provider runs until an API key is set." },
   { q: "Is this multi-tenant?", a: "Every record is scoped to a workspace. Users can belong to multiple workspaces with RBAC." },
   { q: "Do you support Indian and international billing?", a: "Razorpay and Stripe adapters are in the architecture. Payments stay disconnected until credentials are supplied." },
 ];

@@ -18,6 +18,7 @@ export async function createLeadAction(formData: FormData) {
       source: String(formData.get("source") || "Manual"),
       status: (String(formData.get("status") || "NEW") as LeadStatus) || "NEW",
       notes: String(formData.get("notes") || "") || null,
+      campaignId: String(formData.get("campaignId") || "") || null,
     },
   });
   revalidatePath("/app/leads");

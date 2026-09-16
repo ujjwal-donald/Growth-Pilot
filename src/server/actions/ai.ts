@@ -283,3 +283,124 @@ export async function generateAdsAction(input: {
     return { error: error instanceof Error ? error.message : "Ad generation failed" };
   }
 }
+
+export async function generateCaptionFormAction(formData: FormData) {
+  const ctx = await requireWorkspace("EDITOR");
+  const platform = (String(formData.get("platform") || "INSTAGRAM") as SocialPlatform) || "INSTAGRAM";
+  const topic = String(formData.get("topic") || "weekly offer");
+  const tone = String(formData.get("tone") || ctx.profile?.brandTone || "Professional");
+  try {
+    const result = await trackAndGenerate({
+      workspaceId: ctx.workspace.id,
+      userId: ctx.user.id,
+      feature: "caption_generator",
+      json: true,
+      messages: [
+        { role: "system", content: brandSystemPrompt(profileContext(ctx.profile)) },
+        { role: "user", content: promptTemplates.caption({ platform, topic, tone }) },
+      ],
+    });
+    const data = parseJson<{ captions?: Array<{ text?: string; cta?: string; hashtags?: string[] }> }>(result.text);
+    const first = data.captions?.[0];
+    if (first?.text) {
+      await prisma.socialPost.create({
+        data: {
+          workspaceId: ctx.workspace.id,
+          createdById: ctx.user.id,
+          platform,
+          copy: first.text,
+          cta: first.cta,
+          hashtags: first.hashtags ?? [],
+          contentType: "caption",
+          topic,
+          tone,
+          status: "DRAFT",
+        },
+      });
+    }
+  } catch (error) {
+    if (error instanceof ActionError) throw error;
+    throw new ActionError(error instanceof Error ? error.message : "Caption generation failed");
+  }
+  revalidatePath("/app/content/captions");
+}
+
+export async function generateHashtagsFormAction(formData: FormData) {
+  const ctx = await requireWorkspace("EDITOR");
+  const platform = (String(formData.get("platform") || "INSTAGRAM") as SocialPlatform) || "INSTAGRAM";
+  const topic = String(formData.get("topic") || ctx.profile?.industry || "marketing");
+  try {
+    const result = await trackAndGenerate({
+      workspaceId: ctx.workspace.id,
+      userId: ctx.user.id,
+      feature: "hashtag_generator",
+      json: true,
+      messages: [
+        { role: "system", content: brandSystemPrompt(profileContext(ctx.profile)) },
+        { role: "user", content: promptTemplates.hashtags({ platform, topic }) },
+      ],
+    });
+    const data = parseJson<{ primary?: string[]; niche?: string[] }>(result.text);
+    const tags = [...(data.primary ?? []), ...(data.niche ?? [])];
+    await prisma.socialPost.create({
+      data: {
+        workspaceId: ctx.workspace.id,
+        createdById: ctx.user.id,
+        platform,
+        copy: tags.join(" "),
+        hashtags: tags,
+        contentType: "hashtags",
+        topic,
+        status: "DRAFT",
+      },
+    });
+  } catch (error) {
+    if (error instanceof ActionError) throw error;
+    throw new ActionError(error instanceof Error ? error.message : "Hashtag generation failed");
+  }
+  revalidatePath("/app/content/hashtags");
+}
+
+export async function generateContentSuggestionsAction() {
+  const ctx = await requireWorkspace("EDITOR");
+  const keywords = await prisma.keyword.findMany({
+    where: { workspaceId: ctx.workspace.id },
+    take: 8,
+    orderBy: { createdAt: "desc" },
+  });
+  const issues = await prisma.seoIssue.findMany({
+    where: { audit: { workspaceId: ctx.workspace.id } },
+    take: 6,
+    orderBy: { createdAt: "desc" },
+  });
+  const result = await trackAndGenerate({
+    workspaceId: ctx.workspace.id,
+    userId: ctx.user.id,
+    feature: "seo_suggestions",
+    json: true,
+    messages: [
+      { role: "system", content: brandSystemPrompt(profileContext(ctx.profile)) },
+      {
+        role: "user",
+        content: promptTemplates.suggestions({
+          business: ctx.profile?.businessName ?? ctx.workspace.name,
+          keywords: keywords.map((row) => row.keyword),
+          issues: issues.map((row) => row.title),
+        }),
+      },
+    ],
+  });
+  const data = parseJson<{ ideas?: Array<Record<string, unknown>> }>(result.text);
+  const calendar = await prisma.contentCalendar.create({
+    data: {
+      workspaceId: ctx.workspace.id,
+      name: "SEO content suggestions",
+      month: new Date().getMonth() + 1,
+      year: new Date().getFullYear(),
+      goal: "Improve SEO",
+      generatedPlan: JSON.parse(JSON.stringify(data)),
+    },
+  });
+  revalidatePath("/app/seo/suggestions");
+  return { calendarId: calendar.id };
+}

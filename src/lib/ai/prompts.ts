@@ -95,4 +95,15 @@ Audience: ${input.audience}
 Channels: ${input.channels.join(", ") || "recommend"}
 Budget: ${input.budget}
 Return JSON with keys: channels, contentStrategy, budgetAllocation, postingFrequency, adCopy, kpis.`,
+  caption: (input: { platform: string; topic: string; tone: string }) =>
+    `Write 3 short ${input.platform} captions about "${input.topic}" in a ${input.tone} voice.
+Return JSON with key captions: array of {text, cta, hashtags}.`,
+  hashtags: (input: { topic: string; platform: string }) =>
+    `Suggest 12 ${input.platform} hashtags for "${input.topic}".
+Return JSON with keys: primary (array), niche (array), avoid (array).`,
+  suggestions: (input: { business: string; keywords: string[]; issues: string[] }) =>
+    `Propose 6 content pieces for ${input.business}.
+Keywords: ${input.keywords.join(", ") || "none yet"}
+SEO issues: ${input.issues.join("; ") || "none"}
+Return JSON with key ideas: array of {title, format, keyword, outline}.`,
 };

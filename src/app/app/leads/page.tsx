@@ -8,10 +8,16 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 
 export default async function LeadsPage() {
   const ctx = await requireWorkspace();
-  const leads = await prisma.lead.findMany({
-    where: { workspaceId: ctx.workspace.id },
-    orderBy: { createdAt: "desc" },
-  });
+  const [leads, campaigns] = await Promise.all([
+    prisma.lead.findMany({
+      where: { workspaceId: ctx.workspace.id },
+      orderBy: { createdAt: "desc" },
+    }),
+    prisma.campaign.findMany({
+      where: { workspaceId: ctx.workspace.id, kind: "LEAD" },
+      select: { id: true, name: true },
+    }),
+  ]);
 
   return (
     <div>
@@ -21,6 +27,14 @@ export default async function LeadsPage() {
         <Input name="email" placeholder="Email" />
         <Input name="company" placeholder="Company" />
         <Input name="source" placeholder="Source" />
+        <select name="campaignId" className="h-9 rounded-lg border px-3 text-sm">
+          <option value="">No campaign</option>
+          {campaigns.map((campaign) => (
+            <option key={campaign.id} value={campaign.id}>
+              {campaign.name}
+            </option>
+          ))}
+        </select>
         <Button type="submit">Add lead</Button>
       </form>
       <Table>

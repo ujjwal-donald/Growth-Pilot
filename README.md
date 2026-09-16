@@ -24,16 +24,18 @@ Server actions / Route handlers   ← keep this boundary so a separate API can r
 
 **Multi-tenant rule:** every customer record has `workspaceId`. Users join workspaces through `WorkspaceMember` with roles Owner / Admin / Marketer / Editor / Viewer.
 
+The full layer diagram, adapter table, and git promote path live in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
+
 **Secrets:** API keys and social tokens never ship to the browser. Social tokens are encrypted at rest.
 
 ## Phase roadmap
 
 | Phase | Scope |
 | --- | --- |
-| 1 (this PR) | App shell, auth, Prisma schema, onboarding, AI studio, calendar, admin |
+| 1 | App shell, auth, Prisma schema, onboarding, AI studio, calendar, admin |
 | 2 | Social OAuth + publishing worker, GA / Search Console |
-| 3 | SEO crawler, live keyword APIs, competitor crawl |
-| 4 | Ad network publish, lead automation, agency white-label, PDF reports |
+| 3 (this pass) | SEO crawler, campaign planner, lead campaigns, reports, AI/ads/billing adapters |
+| 4 | Live ad-network spend, payment checkout, PDF renderer |
 
 ## Environments (dev / test / prod)
 

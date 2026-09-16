@@ -1,5 +1,5 @@
 import { requireWorkspace } from "@/server/auth-context";
-import { prisma } from "@/lib/db";
+import { getWorkspaceOverview } from "@/lib/analytics/overview";
 import { PageHeader } from "@/components/layout/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { SimpleLineChart } from "@/components/charts/simple-line-chart";
@@ -14,30 +14,25 @@ const recommendations = [
 
 export default async function DashboardHomePage() {
   const ctx = await requireWorkspace();
-  const [published, scheduled, leads, generations] = await Promise.all([
-    prisma.socialPost.count({ where: { workspaceId: ctx.workspace.id, status: "PUBLISHED" } }),
-    prisma.socialPost.count({ where: { workspaceId: ctx.workspace.id, status: "SCHEDULED" } }),
-    prisma.lead.count({ where: { workspaceId: ctx.workspace.id } }),
-    prisma.aiGeneration.count({ where: { workspaceId: ctx.workspace.id } }),
-  ]);
+  const overview = await getWorkspaceOverview(ctx.workspace.id);
 
   const plan = getPlan(ctx.subscription?.plan ?? "FREE");
   const traffic = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((label, i) => ({
     label,
-    value: 120 + i * 18 + published * 4,
+    value: 120 + i * 18 + overview.published * 4,
   }));
 
   const kpis = [
-    { label: "Marketing Score", value: "78" },
-    { label: "SEO Score", value: "82" },
+    { label: "Marketing Score", value: String(overview.marketingScore) },
+    { label: "SEO Score", value: overview.seoScore != null ? String(overview.seoScore) : "—" },
     { label: "Social Engagement", value: "3.4%" },
-    { label: "Total Followers", value: "12.8k" },
     { label: "Website Traffic", value: "4,210" },
-    { label: "Leads Generated", value: String(leads) },
-    { label: "Posts Published", value: String(published) },
-    { label: "Scheduled Posts", value: String(scheduled) },
-    { label: "Campaign Spend", value: "₹0" },
-    { label: "Conversions", value: "18" },
+    { label: "Leads Generated", value: String(overview.pipeline) },
+    { label: "Posts Published", value: String(overview.published) },
+    { label: "Scheduled Posts", value: String(overview.scheduled) },
+    { label: "Campaigns", value: String(overview.campaigns) },
+    { label: "Won deals", value: String(overview.won) },
+    { label: "AI generations", value: String(overview.generations) },
   ];
 
   return (
@@ -85,7 +80,7 @@ export default async function DashboardHomePage() {
           </CardHeader>
           <CardContent>
             <SimpleLineChart
-              data={traffic.map((row, i) => ({ label: row.label, value: leads + i }))}
+              data={traffic.map((row, i) => ({ label: row.label, value: overview.pipeline + i }))}
               dataKey="value"
               color="#EA580C"
             />
@@ -97,7 +92,7 @@ export default async function DashboardHomePage() {
           </CardHeader>
           <CardContent>
             <SimpleLineChart
-              data={traffic.map((row, i) => ({ label: row.label, value: 20 + i * 6 + generations }))}
+              data={traffic.map((row, i) => ({ label: row.label, value: 20 + i * 6 + overview.generations }))}
               dataKey="value"
               color="#7C3AED"
             />

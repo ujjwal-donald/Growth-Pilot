@@ -108,6 +108,7 @@ export const dashboardNav: NavGroup[] = [
       { href: "/app/analytics/social", label: "Social Analytics", icon: Share2 },
       { href: "/app/analytics/website", label: "Website Analytics", icon: Globe },
       { href: "/app/analytics/campaigns", label: "Campaign Performance", icon: LineChart },
+      { href: "/app/analytics/report", label: "Reports", icon: FileSearch },
     ],
   },
   {
