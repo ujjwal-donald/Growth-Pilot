@@ -71,7 +71,7 @@ export async function createCampaignAction(formData: FormData) {
   await prisma.campaign.create({
     data: {
       workspaceId: ctx.workspace.id,
-      name: String(formData.get("name") || "Untitled campaign"),
+      name: String(formData.get("campaignName") || formData.get("name") || "Untitled campaign"),
       goal: String(formData.get("goal") || ctx.profile?.primaryGoal || "") || null,
       audience: String(formData.get("audience") || ctx.profile?.targetAudience || "") || null,
       channels,

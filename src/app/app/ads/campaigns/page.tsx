@@ -21,7 +21,7 @@ export default async function AdsCampaignsPage() {
       />
       <form action={createCampaignAction} className="mb-8 grid gap-2 md:grid-cols-3">
         <input type="hidden" name="kind" value="ADS" />
-        <Input name="name" placeholder="Campaign name" required />
+        <Input name="campaignName" placeholder="Campaign name" defaultValue="Untitled campaign" />
         <Input name="goal" placeholder="Goal" defaultValue={ctx.profile?.primaryGoal ?? "Generate Leads"} />
         <Input name="audience" placeholder="Audience" defaultValue={ctx.profile?.targetAudience ?? ""} />
         <Input name="channels" placeholder="Channels (comma)" defaultValue="LinkedIn, Google Search" />

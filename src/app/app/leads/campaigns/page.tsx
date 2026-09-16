@@ -22,7 +22,7 @@ export default async function LeadCampaignsPage() {
       />
       <form action={createCampaignAction} className="mb-8 grid gap-2 md:grid-cols-3">
         <input type="hidden" name="kind" value="LEAD" />
-        <Input name="name" placeholder="Campaign name" required />
+        <Input name="campaignName" placeholder="Campaign name" required />
         <Input name="goal" placeholder="Offer / CTA" />
         <Input name="channels" placeholder="Email, WhatsApp, Call" defaultValue="Email" />
         <Button type="submit">Create lead campaign</Button>
